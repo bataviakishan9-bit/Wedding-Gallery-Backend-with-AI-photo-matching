@@ -1,7 +1,7 @@
 import express from 'express';
 import cors from 'cors';
 import multer from 'multer';
-import { registerUserFace, processDriveFolder, findMyPhotos, initModels } from './galleryService.js';
+import { registerUserFace, processCloudinaryImage, findMyPhotos, initModels } from './galleryService.js';
 
 const app = express();
 app.use(cors());
@@ -31,15 +31,18 @@ app.get('/api/photos/:userId', async (req, res) => {
   }
 });
 
-// 3. Endpoint: Trigger bulk Drive sync (Call this via Cron or Webhook)
-app.post('/api/sync-drive', async (req, res) => {
+// 3. Endpoint: Process Cloudinary image (Tag + Face detection)
+app.post('/api/process-image', async (req, res) => {
   try {
-    const { folderId } = req.body;
-    const result = await processDriveFolder(folderId);
+    const { imageUrl } = req.body;
+    if (!imageUrl) {
+      return res.status(400).json({ error: 'imageUrl is required' });
+    }
+    const result = await processCloudinaryImage(imageUrl);
     res.json(result);
   } catch (error) {
     console.error(error);
-    res.status(500).json({ error: 'Sync failed' });
+    res.status(500).json({ error: 'Image processing failed' });
   }
 });
 

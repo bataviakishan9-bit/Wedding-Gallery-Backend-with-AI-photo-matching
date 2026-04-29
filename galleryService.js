@@ -1,4 +1,3 @@
-import { google } from 'googleapis';
 import * as faceapi from '@vladmandic/face-api';
 import { Canvas, Image, ImageData, loadImage } from 'canvas';
 import pg from 'pg';
@@ -10,21 +9,10 @@ faceapi.env.monkeyPatch({ Canvas, Image, ImageData });
 
 const pool = new pg.Pool({
   connectionString: process.env.DATABASE_URL,
-  ssl: { rejectUnauthorized: false }, // Required for Render Postgres
+  ssl: { rejectUnauthorized: false }, // Required for Railway Postgres
 });
 
 const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
-
-// Parse Google Credentials from Environment Variable
-let auth;
-if (process.env.GOOGLE_CREDENTIALS_JSON) {
-  const credentials = JSON.parse(process.env.GOOGLE_CREDENTIALS_JSON);
-  auth = new google.auth.GoogleAuth({
-    credentials,
-    scopes: ['https://www.googleapis.com/auth/drive.readonly'],
-  });
-}
-const drive = google.drive({ version: 'v3', auth });
 
 // Load Models
 export async function initModels() {
@@ -39,7 +27,7 @@ export async function initModels() {
     // Create tables if they don't exist
     await pool.query(`
       CREATE TABLE IF NOT EXISTS users (user_id VARCHAR(255) PRIMARY KEY, face_descriptor vector(128));
-      CREATE TABLE IF NOT EXISTS event_photos (photo_id SERIAL PRIMARY KEY, drive_file_id VARCHAR(255) UNIQUE, thumbnail_url TEXT, ai_tags TEXT);
+      CREATE TABLE IF NOT EXISTS event_photos (photo_id SERIAL PRIMARY KEY, cloudinary_url TEXT UNIQUE, ai_tags TEXT, uploaded_at TIMESTAMP DEFAULT NOW());
       CREATE TABLE IF NOT EXISTS detected_faces (face_id SERIAL PRIMARY KEY, photo_id INT REFERENCES event_photos(photo_id), face_descriptor vector(128));
     `);
 
@@ -68,22 +56,16 @@ export async function registerUserFace(userId, imageBuffer) {
   return { success: true };
 }
 
-export async function processDriveFolder(folderId) {
-  const res = await drive.files.list({
-    q: `'${folderId}' in parents and mimeType contains 'image/'`,
-    fields: 'files(id, thumbnailLink)',
-  });
-
-  for (const file of res.data.files) {
+export async function processCloudinaryImage(imageUrl) {
+  try {
     // Skip if already processed
-    const existing = await pool.query('SELECT 1 FROM event_photos WHERE drive_file_id = $1', [file.id]);
-    if (existing.rows.length > 0) continue;
+    const existing = await pool.query('SELECT 1 FROM event_photos WHERE cloudinary_url = $1', [imageUrl]);
+    if (existing.rows.length > 0) return { success: false, message: 'Image already processed' };
 
-    const fileResponse = await drive.files.get(
-      { fileId: file.id, alt: 'media' },
-      { responseType: 'arraybuffer' }
-    );
-    const imageBuffer = Buffer.from(fileResponse.data);
+    // Fetch image from Cloudinary URL
+    const response = await fetch(imageUrl);
+    const arrayBuffer = await response.arrayBuffer();
+    const imageBuffer = Buffer.from(arrayBuffer);
 
     // 1. Claude Tagging
     const base64Image = imageBuffer.toString('base64');
@@ -110,8 +92,8 @@ export async function processDriveFolder(folderId) {
 
     // 2. Save Photo Record
     const photoRes = await pool.query(
-      'INSERT INTO event_photos (drive_file_id, thumbnail_url, ai_tags) VALUES ($1, $2, $3) RETURNING photo_id',
-      [file.id, file.thumbnailLink, aiTags]
+      'INSERT INTO event_photos (cloudinary_url, ai_tags) VALUES ($1, $2) RETURNING photo_id',
+      [imageUrl, aiTags]
     );
     const photoId = photoRes.rows[0].photo_id;
 
@@ -129,8 +111,12 @@ export async function processDriveFolder(folderId) {
         `[${faceArray.join(',')}]`,
       ]);
     }
+
+    return { success: true, photoId, facesDetected: detections.length };
+  } catch (error) {
+    console.error('Error processing image:', error);
+    throw error;
   }
-  return { success: true };
 }
 
 export async function findMyPhotos(userId) {
@@ -138,7 +124,7 @@ export async function findMyPhotos(userId) {
   if (userRes.rows.length === 0) return [];
 
   const matchQuery = `
-    SELECT DISTINCT e.thumbnail_url, e.ai_tags
+    SELECT DISTINCT e.cloudinary_url, e.ai_tags
     FROM detected_faces d
     JOIN event_photos e ON d.photo_id = e.photo_id
     WHERE d.face_descriptor <-> $1 < 0.45
