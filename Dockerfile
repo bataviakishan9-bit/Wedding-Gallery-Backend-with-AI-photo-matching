@@ -22,14 +22,12 @@ COPY . .
 
 # Download face-api models
 RUN mkdir -p models && \
-    cd models && \
-    wget https://cdn.jsdelivr.net/npm/@vladmandic/face-api/model/ssd_mobilenetv1_model.bin && \
-    wget https://cdn.jsdelivr.net/npm/@vladmandic/face-api/model/ssd_mobilenetv1_model.json && \
-    wget https://cdn.jsdelivr.net/npm/@vladmandic/face-api/model/face_landmark_68_model.bin && \
-    wget https://cdn.jsdelivr.net/npm/@vladmandic/face-api/model/face_landmark_68_model.json && \
-    wget https://cdn.jsdelivr.net/npm/@vladmandic/face-api/model/face_recognition_model.bin && \
-    wget https://cdn.jsdelivr.net/npm/@vladmandic/face-api/model/face_recognition_model.json && \
-    cd ..
+    curl -L -o models/ssd_mobilenetv1_model.bin https://cdn.jsdelivr.net/npm/@vladmandic/face-api/model/ssd_mobilenetv1_model.bin && \
+    curl -L -o models/ssd_mobilenetv1_model.json https://cdn.jsdelivr.net/npm/@vladmandic/face-api/model/ssd_mobilenetv1_model.json && \
+    curl -L -o models/face_landmark_68_model.bin https://cdn.jsdelivr.net/npm/@vladmandic/face-api/model/face_landmark_68_model.bin && \
+    curl -L -o models/face_landmark_68_model.json https://cdn.jsdelivr.net/npm/@vladmandic/face-api/model/face_landmark_68_model.json && \
+    curl -L -o models/face_recognition_model.bin https://cdn.jsdelivr.net/npm/@vladmandic/face-api/model/face_recognition_model.bin && \
+    curl -L -o models/face_recognition_model.json https://cdn.jsdelivr.net/npm/@vladmandic/face-api/model/face_recognition_model.json
 
 EXPOSE 10000
 
