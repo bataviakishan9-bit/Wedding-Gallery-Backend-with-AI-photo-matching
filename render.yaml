@@ -1,24 +1,24 @@
 services:
-  # 1. The PostgreSQL Database
-  - type: psql
-    name: magic-gallery-db
-    plan: starter # Required for pgvector extension
-    ipAllowList: [] # Allows internal connections only for security
-
-  # 2. The Node.js Web API
+  # 1. The Node.js Web API
   - type: web
     name: magic-gallery-api
     env: node
-    plan: starter # Starter gives 512MB RAM, needed to load AI models
+    plan: starter
     buildCommand: npm install
     startCommand: node server.js
     envVars:
-      - key: DATABASE_URL
-        fromDatabase:
-          name: magic-gallery-db
-          property: connectionString
       - key: NODE_ENV
         value: production
-      # You will add these manually in the Render Dashboard later:
-      # - ANTHROPIC_API_KEY
-      # - GOOGLE_CREDENTIALS_JSON
+      - key: ANTHROPIC_API_KEY
+        sync: false
+      - key: GOOGLE_CREDENTIALS_JSON
+        sync: false
+
+databases:
+  # 2. The PostgreSQL Database with pgvector
+  - name: magic-gallery-db
+    databaseName: wedding_gallery
+    user: postgres
+    plan: starter
+    region: oregon
+    postgresSQLVersion: "15"
