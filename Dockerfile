@@ -22,7 +22,14 @@ COPY . .
 
 # Download face-api models
 RUN mkdir -p models && \
-    node -e "console.log('Models directory created')"
+    cd models && \
+    wget https://cdn.jsdelivr.net/npm/@vladmandic/face-api/model/ssd_mobilenetv1_model.bin && \
+    wget https://cdn.jsdelivr.net/npm/@vladmandic/face-api/model/ssd_mobilenetv1_model.json && \
+    wget https://cdn.jsdelivr.net/npm/@vladmandic/face-api/model/face_landmark_68_model.bin && \
+    wget https://cdn.jsdelivr.net/npm/@vladmandic/face-api/model/face_landmark_68_model.json && \
+    wget https://cdn.jsdelivr.net/npm/@vladmandic/face-api/model/face_recognition_model.bin && \
+    wget https://cdn.jsdelivr.net/npm/@vladmandic/face-api/model/face_recognition_model.json && \
+    cd ..
 
 EXPOSE 10000
 
