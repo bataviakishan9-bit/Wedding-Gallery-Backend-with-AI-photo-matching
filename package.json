@@ -17,6 +17,7 @@
     "multer": "^1.4.5-lts.1",
     "googleapis": "^118.0.0",
     "@vladmandic/face-api": "^1.7.14",
+    "@tensorflow/tfjs-node": "^4.11.0",
     "canvas": "^2.11.2",
     "pg": "^8.11.3",
     "@anthropic-ai/sdk": "^0.16.0",

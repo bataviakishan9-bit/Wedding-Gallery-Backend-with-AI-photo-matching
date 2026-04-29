@@ -1,8 +1,9 @@
 FROM node:20-bullseye
 
-# Install canvas dependencies
+# Install canvas and tfjs-node dependencies
 RUN apt-get update && apt-get install -y \
     python3 \
+    python3-dev \
     make \
     g++ \
     libcairo2-dev \
