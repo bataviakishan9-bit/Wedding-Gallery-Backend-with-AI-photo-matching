@@ -18,6 +18,4 @@ databases:
   # 2. The PostgreSQL Database with pgvector
   - name: magic-gallery-db
     databaseName: wedding_gallery
-    user: postgres
     plan: starter
-    region: oregon
