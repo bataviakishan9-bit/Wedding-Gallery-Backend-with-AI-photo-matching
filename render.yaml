@@ -21,4 +21,3 @@ databases:
     user: postgres
     plan: starter
     region: oregon
-    postgresSQLVersion: "15"
