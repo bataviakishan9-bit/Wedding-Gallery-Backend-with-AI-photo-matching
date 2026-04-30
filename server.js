@@ -1,7 +1,7 @@
 import express from 'express';
 import cors from 'cors';
 import multer from 'multer';
-import { registerUserFace, processCloudinaryImage, findMyPhotos, initModels } from './galleryService.js';
+import { registerUserFace, processCloudinaryImage, findMyPhotos, initModels, uploadToGoogleDrive, scanAndIndexGoogleDrivePhotos } from './galleryService.js';
 
 const app = express();
 app.use(cors());
@@ -43,6 +43,39 @@ app.post('/api/process-image', async (req, res) => {
   } catch (error) {
     console.error(error);
     res.status(500).json({ error: 'Image processing failed' });
+  }
+});
+
+// 4. Endpoint: Upload photo to Google Drive
+app.post('/api/upload-photo', upload.single('photo'), async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ error: 'No file uploaded' });
+    }
+
+    const fileName = `wedding-${Date.now()}-${req.file.originalname}`;
+    const { fileId, downloadUrl } = await uploadToGoogleDrive(req.file.buffer, fileName);
+
+    res.json({
+      success: true,
+      fileId,
+      downloadUrl,
+      fileName,
+    });
+  } catch (error) {
+    console.error('Upload error:', error);
+    res.status(500).json({ error: 'Failed to upload photo to Google Drive' });
+  }
+});
+
+// Scan and index Google Drive photos
+app.post('/api/scan-drive', async (req, res) => {
+  try {
+    const result = await scanAndIndexGoogleDrivePhotos();
+    res.json(result);
+  } catch (error) {
+    console.error('Scan error:', error);
+    res.status(500).json({ error: 'Scan failed: ' + error.message });
   }
 });
 
